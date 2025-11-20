@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.example.cf-ddns</string>
+
+  <key>ProgramArguments</key>
+  <array>
+    <!-- Path to the published binary -->
+    <string>/usr/local/bin/cf-ddns</string>
+    <!-- Hostname to update -->
+    <string>your.host.name</string>
+  </array>
+
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>CLOUDFLARE_API_TOKEN</key>
+    <string>your_token_here</string>
+    <!-- Optional; remove or leave blank if using zone name inference -->
+    <key>CLOUDFLARE_ZONE_ID</key>
+    <string>your_zone_id_here</string>
+    <!-- Optional alternative to CLOUDFLARE_ZONE_ID -->
+    <key>CLOUDFLARE_ZONE_NAME</key>
+    <string>example.com</string>
+  </dict>
+
+  <key>RunAtLoad</key>
+  <true/>
+  <key>KeepAlive</key>
+  <true/>
+
+  <key>StandardOutPath</key>
+  <string>/tmp/cf-ddns.log</string>
+  <key>StandardErrorPath</key>
+  <string>/tmp/cf-ddns.err</string>
+</dict>
+</plist>

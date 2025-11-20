@@ -5,6 +5,7 @@ obj/
 # User-specific files
 .vs/
 .vscode/
+.idea/
 
 # Local NuGet/CLI cache
 .dotnet/
