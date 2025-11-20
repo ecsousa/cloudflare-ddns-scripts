@@ -1,26 +1,29 @@
-name: Build CloudflareUpdater binaries
+name: Build and Release cf-ddns binaries
 
 on:
-  push:
-    branches: [ main, master ]
-  pull_request:
-  workflow_dispatch:
+  release:
+    types: [created]
 
 jobs:
   build:
+    permissions:
+      contents: write
     strategy:
       fail-fast: false
       matrix:
         include:
           - os: windows-latest
             rid: win-x64
-            artifact: cf-ddns-win-x64
+            artifact: cf-ddns-win-x64.exe
+            ext: ".exe"
           - os: macos-13
             rid: osx-x64
             artifact: cf-ddns-macos-x64
+            ext: ""
           - os: macos-14
             rid: osx-arm64
             artifact: cf-ddns-macos-arm64
+            ext: ""
     runs-on: ${{ matrix.os }}
 
     steps:
@@ -44,8 +47,20 @@ jobs:
           /p:PublishTrimmed=false
           /p:IncludeNativeLibrariesForSelfExtract=true
 
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
+      - name: Rename binary with cf-ddns prefix
+        shell: bash
+        run: |
+          publish_dir="CloudflareUpdater/bin/Release/net8.0/${{ matrix.rid }}/publish"
+          src="${publish_dir}/CloudflareUpdater${{ matrix.ext }}"
+          dest="${publish_dir}/${{ matrix.artifact }}"
+          mv "$src" "$dest"
+
+      - name: Upload release asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          name: ${{ matrix.artifact }}
-          path: CloudflareUpdater/bin/Release/net8.0/${{ matrix.rid }}/publish/**
+          upload_url: ${{ github.event.release.upload_url }}
+          asset_path: CloudflareUpdater/bin/Release/net8.0/${{ matrix.rid }}/publish/${{ matrix.artifact }}
+          asset_name: ${{ matrix.artifact }}
+          asset_content_type: application/octet-stream
