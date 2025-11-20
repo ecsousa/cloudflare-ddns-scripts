@@ -1,0 +1,51 @@
+name: Build CloudflareUpdater binaries
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            rid: win-x64
+            artifact: cf-ddns-win-x64
+          - os: macos-13
+            rid: osx-x64
+            artifact: cf-ddns-macos-x64
+          - os: macos-14
+            rid: osx-arm64
+            artifact: cf-ddns-macos-arm64
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+
+      - name: Restore
+        run: dotnet restore CloudflareUpdater/CloudflareUpdater.csproj
+
+      - name: Publish single-file binary
+        run: >
+          dotnet publish CloudflareUpdater/CloudflareUpdater.csproj
+          -c Release
+          -r ${{ matrix.rid }}
+          --self-contained true
+          /p:PublishSingleFile=true
+          /p:PublishTrimmed=false
+          /p:IncludeNativeLibrariesForSelfExtract=true
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: CloudflareUpdater/bin/Release/net8.0/${{ matrix.rid }}/publish/**
