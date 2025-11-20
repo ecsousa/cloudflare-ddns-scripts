@@ -1,0 +1,14 @@
+# Build output
+bin/
+obj/
+
+# User-specific files
+.vs/
+.vscode/
+
+# Local NuGet/CLI cache
+.dotnet/
+
+# OS noise
+.DS_Store
+Thumbs.db
