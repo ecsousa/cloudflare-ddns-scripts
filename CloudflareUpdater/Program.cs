@@ -12,6 +12,37 @@ internal static class Program
 
     private static async Task<int> Main(string[] args)
     {
+        if (args[0] == "--help" || args.Length == 0)
+        {
+            Console.WriteLine("Cloudflare DNS updater");
+            Console.WriteLine("Usage: dotnet run -- <hostname>");
+            Console.WriteLine("Environment variables:");
+            Console.WriteLine("  CLOUDFLARE_API_TOKEN  - Cloudflare API token with DNS edit permissions (required)");
+            Console.WriteLine("  CLOUDFLARE_ZONE_ID    - Cloudflare Zone ID (optional; if not set, CLOUDFLARE_ZONE_NAME or guessed from hostname will be used)");
+            Console.WriteLine("  CLOUDFLARE_ZONE_NAME  - Cloudflare Zone Name (optional; used if CLOUDFLARE_ZONE_ID is not set)");
+            return 0;
+        }
+
+        var ignoredTerms = Environment.GetEnvironmentVariable("CFDDNS_IGNORED")
+            ?.Split('|', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+        if (args[0] == "--check" || args.Length == 0)
+        {
+            try
+            {
+                var ip = GetLocalIPv4(ignoredTerms);
+                Console.WriteLine(ip != null
+                    ? $"Local IPv4 address: {ip}"
+                    : "Could not determine local IPv4 address.");
+                return 0;
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"error: {ex.Message}");
+                return 1;
+            }
+        }
+
         Console.WriteLine("Cloudflare DNS updater starting...");
 
         if (args.Length != 1)
@@ -39,7 +70,7 @@ internal static class Program
 
         try
         {
-            var localIp = GetLocalIPv4() ?? throw new InvalidOperationException("could not determine local IPv4 address");
+            var localIp = GetLocalIPv4(ignoredTerms) ?? throw new InvalidOperationException("could not determine local IPv4 address");
             var zoneId = string.IsNullOrWhiteSpace(zoneIdEnv)
                 ? await FetchZoneIdAsync(http, zoneNameEnv ?? GuessZoneName(hostname))
                 : zoneIdEnv;
@@ -66,7 +97,7 @@ internal static class Program
             while (true)
             {
                 await Task.Delay(TimeSpan.FromSeconds(PollSeconds));
-                var currentLocal = GetLocalIPv4();
+                var currentLocal = GetLocalIPv4(ignoredTerms);
                 if (currentLocal == null)
                 {
                     Console.Error.WriteLine("warning: could not determine local IPv4 address; retrying...");
@@ -105,11 +136,14 @@ internal static class Program
         return parts.Length >= 2 ? $"{parts[^2]}.{parts[^1]}" : null;
     }
 
-    private static string? GetLocalIPv4()
+    private static string? GetLocalIPv4(string[]? ignoredTerms)
     {
         foreach (var ni in NetworkInterface.GetAllNetworkInterfaces()
                      .Where(n => n.OperationalStatus == OperationalStatus.Up && n.NetworkInterfaceType != NetworkInterfaceType.Loopback))
         {
+            if (ignoredTerms != null && ignoredTerms.Any(term => ni.Description.Contains(term)))
+                continue;
+
             var props = ni.GetIPProperties();
             if (props.GatewayAddresses.Count == 0)
                 continue;
